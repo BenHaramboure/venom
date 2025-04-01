@@ -71,6 +71,8 @@ type Venom struct {
 	StopOnFailure bool
 	HtmlReport    bool
 	Verbose       int
+	IncludedTags  []string
+	ExcludedTags  []string
 }
 
 var trace = color.New(color.Attribute(90)).SprintFunc()
