@@ -359,7 +359,9 @@ var Cmd = &cobra.Command{
         }
 
         if os.Getenv("HAS_LOGS_PLATFORM") == "true" {
-            fetchOpenSearchIndexPatterns()
+            if strings.ToLower(os.Getenv("LOGS_PLATFORM_NAME")) == "opensearch" {
+                fetchOpenSearchIndexPatterns()
+            }
         }
 
 
@@ -442,7 +444,7 @@ func fetchOpenSearchIndexPatterns() {
 	login := os.Getenv("LOGS_PLATFORM_LOGIN")
 	password := os.Getenv("LOGS_PLATFORM_PASSWORD")
 	baseURL := os.Getenv("LOGS_PLATFORM_BASE_URL")
-	streamTitle := os.Getenv("OPENSEARCH_LOGS_STREAM_NAME")
+	streamTitle := os.Getenv("LOGS_STREAM_NAME")
 
 	if name == "" || login == "" || password == "" || baseURL == "" || streamTitle == "" {
 		fmt.Errorf("⚠️ One or more required environment variables are missing. Skipping logs platform request.")
@@ -497,7 +499,7 @@ func fetchOpenSearchIndexPatterns() {
 	for _, obj := range result.SavedObjects {
 		if obj.Attributes.Title == streamTitle {
 		    fmt.Printf("✅ Found index-pattern with title='%s'", obj.Attributes.Title)
-			os.Setenv("OPENSEARCH_LOGS_STREAM_ID", obj.ID)
+			os.Setenv("LOGS_STREAM_ID", obj.ID)
 			return
 		}
 	}
