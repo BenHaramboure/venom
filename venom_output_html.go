@@ -98,13 +98,30 @@ func outputHTML(testsResult *Tests) ([]byte, error) {
                     result := &testCase.TestStepResults[idx]
                     if len(result.Errors) > 0 && !result.End.IsZero() {
                         var requestIdHeader string
-                        if headers, ok := result.ComputedVars["result.headers"].(map[string]interface{}); ok {
-                            if xrid, ok := headers["X-Kms-RequestId"].(string); ok {
-                                requestIdHeader = xrid
+
+                        if v, ok := result.ComputedVars["result.headers.X-Kms-Requestid"]; ok {
+                            requestIdHeader = strings.TrimPrefix(strings.TrimSpace(fmt.Sprintf("%v", v)), ".")
+                        } else if rawHeaders, ok := result.ComputedVars["result.headers"]; ok {
+                            switch headers := rawHeaders.(type) {
+                            case map[string]interface{}:
+                                for k, v := range headers {
+                                    if strings.EqualFold(k, "X-Kms-Requestid") {
+                                        requestIdHeader = strings.TrimPrefix(strings.TrimSpace(fmt.Sprintf("%v", v)), ".")
+                                        break
+                                    }
+                                }
+                            case map[interface{}]interface{}:
+                                for k, v := range headers {
+                                    if ks, ok := k.(string); ok && strings.EqualFold(ks, "X-Kms-Requestid") {
+                                        requestIdHeader = strings.TrimPrefix(strings.TrimSpace(fmt.Sprintf("%v", v)), ".")
+                                        break
+                                    }
+                                }
+                            default:
+                                log.Printf("unsupported headers type: %T", rawHeaders)
                             }
                         }
 
-                        }
                         if strings.ToLower(os.Getenv("LOGS_PLATFORM_NAME")) == "opensearch" {
                             fromDate := result.End.Add(-1 * time.Minute).UTC().Format("2006-01-02T15:04:05.000Z")
                             toDate := result.End.UTC().Format("2006-01-02T15:04:05.000Z")

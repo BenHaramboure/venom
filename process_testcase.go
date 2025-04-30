@@ -133,6 +133,20 @@ func (v *Venom) parseTestCase(ts *TestSuite, tc *TestCase) ([]string, []string, 
 }
 
 func (v *Venom) runTestCase(ctx context.Context, ts *TestSuite, tc *TestCase) {
+    if len(v.IncludedTags) > 0 {
+         if !testHasAnyTag(tc, v.IncludedTags) {
+             tc.Status = StatusSkip
+             return
+         }
+    }
+
+    if len(v.ExcludedTags) > 0 {
+         if testHasAnyTag(tc, v.ExcludedTags) {
+             tc.Status = StatusSkip
+             return
+         }
+    }
+
 	ctx = context.WithValue(ctx, ContextKey("testcase"), tc.Name)
 
 	tc.TestSuiteVars = ts.Vars.Clone()
@@ -175,20 +189,6 @@ func testHasAnyTag(tc *TestCase, requestedTags []string) bool {
 
 
 func (v *Venom) runTestSteps(ctx context.Context, tc *TestCase, tsIn *TestStepResult) {
-    if len(v.IncludedTags) > 0 {
-         if !testHasAnyTag(tc, v.IncludedTags) {
-             tc.Status = StatusSkip
-             return
-         }
-    }
-
-    if len(v.ExcludedTags) > 0 {
-         if testHasAnyTag(tc, v.ExcludedTags) {
-             tc.Status = StatusSkip
-             return
-         }
-    }
-
 	results, err := testConditionalStatement(ctx, tc, tc.Skip, tc.Vars, "skipping testcase %q: %v")
 	if err != nil {
 		Error(ctx, "unable to evaluate \"skip\" assertions: %v", err)
@@ -385,6 +385,9 @@ loopRawTestSteps:
 
 				Error(ctx, "teststep output vars are: %v", tsResult.ComputedVars)
 
+                tc.computedVars.AddAll(tsResult.ComputedVars.Clone())
+                previousStepVars.AddAll(tsResult.ComputedVars.Clone())
+
 				if isRequired {
 					failure := newFailure(ctx, *tc, stepNumber, rangedIndex, "", errors.New("At least one required assertion failed, skipping remaining steps"))
 					tsResult.appendFailure(*failure)
@@ -403,6 +406,13 @@ loopRawTestSteps:
 				tsResult.appendError(errAssignment)
 				Error(ctx, "unable to process variable assignments: %v", errAssignment)
 			}
+
+            if tsResult.Status == StatusFail {
+                tc.computedVars.AddAll(assign)
+                tc.computedVars.AddAll(tsResult.ComputedVars.Clone())
+                previousStepVars.AddAll(assign)
+                previousStepVars.AddAll(tsResult.ComputedVars.Clone())
+            }
 
 			v.printTestStepResult(tc, tsResult, tsIn, stepNumber, false)
 

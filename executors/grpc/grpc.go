@@ -35,6 +35,8 @@ func New() venom.Executor {
 	return &Executor{}
 }
 
+type Headers map[string]string
+
 // Executor represents a Test Exec
 type Executor struct {
 	URL                  string                 `json:"url" yaml:"url"`
@@ -43,7 +45,7 @@ type Executor struct {
 	JSONDefaultFields    bool                   `json:"default_fields" yaml:"default_fields"`
 	IncludeTextSeparator bool                   `json:"include_text_separator" yaml:"include_text_separator"`
 	Data                 map[string]interface{} `json:"data" yaml:"data"`
-	Headers              map[string]string      `json:"headers" yaml:"headers"`
+	Headers              Headers                `json:"headers" yaml:"headers"`
 	ConnectTimeout       *int64                 `json:"connect_timeout" yaml:"connect_timeout"`
 	TLSClientCert        string                 `json:"tls_client_cert" yaml:"tls_client_cert" mapstructure:"tls_client_cert"`
 	TLSClientKey         string                 `json:"tls_client_key" yaml:"tls_client_key" mapstructure:"tls_client_key"`
@@ -57,6 +59,7 @@ type Result struct {
 	SystemoutJSON interface{} `json:"systemoutjson,omitempty" yaml:"systemoutjson,omitempty"`
 	Systemerr     string      `json:"systemerr,omitempty" yaml:"systemerr,omitempty"`
 	SystemerrJSON interface{} `json:"systemerrjson,omitempty" yaml:"systemerrjson,omitempty"`
+    Headers       Headers     `json:"headers,omitempty" yaml:"headers,omitempty"`
 	Err           string      `json:"err,omitempty" yaml:"err,omitempty"`
 	Code          string      `json:"code,omitempty" yaml:"code,omitempty"`
 	TimeSeconds   float64     `json:"timeseconds,omitempty" yaml:"timeseconds,omitempty"`

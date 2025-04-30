@@ -446,6 +446,11 @@ func fetchOpenSearchIndexPatterns() {
 	baseURL := os.Getenv("LOGS_PLATFORM_BASE_URL")
 	streamTitle := os.Getenv("LOGS_STREAM_NAME")
 
+	if os.Getenv("LOGS_STREAM_ID") != "" {
+        fmt.Errorf("ℹ️ LOGS_PLATFORM_ID already set")
+	    return
+	}
+
 	if name == "" || login == "" || password == "" || baseURL == "" || streamTitle == "" {
 		fmt.Errorf("⚠️ One or more required environment variables are missing. Skipping logs platform request.")
 		return
