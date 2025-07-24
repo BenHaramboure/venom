@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"sort"
 
 	nested "github.com/antonfisher/nested-logrus-formatter"
 	"github.com/gosimple/slug"
@@ -183,6 +184,152 @@ func (v *Venom) Process(ctx context.Context, path []string) error {
 	v.Tests.Status = StatusRun
 	v.Tests.Start = time.Now()
 	Debug(ctx, "nb testsuites: %d", len(v.Tests.TestSuites))
+    /*if len(v.IncludedTags) > 0 {
+        tagOrder := make(map[string]int)
+        for i, tag := range v.IncludedTags {
+            tagOrder[tag] = i
+        }
+
+        type testWithOrigin struct {
+            tc TestCase
+            origin TestSuite
+            tag string
+        }
+
+        var tests []testWithOrigin
+
+        for _, ts := range v.Tests.TestSuites {
+            for _, tc := range ts.TestCases {
+                for _, tag := range tc.Tags {
+                    if _, ok := tagOrder[tag]; ok {
+                        tests = append(tests, testWithOrigin{
+                            tc:     tc,
+                            origin: ts,
+                            tag:    tag,
+                        })
+                        break
+                    }
+                }
+            }
+        }
+
+        sort.SliceStable(tests, func(i, j int) bool {
+            return tagOrder[tests[i].tag] < tagOrder[tests[j].tag]
+        })
+
+        suitesByFile := make(map[string]*TestSuite)
+
+        for _, t := range tests {
+            filename := t.origin.Filepath
+            if _, ok := suitesByFile[filename]; !ok {
+                suitesByFile[filename] = &TestSuite{
+                    Name:     t.origin.Name,
+                    Filepath: filename,
+                    Vars:     t.origin.Vars.Clone(),
+                }
+            }
+            suitesByFile[filename].TestCases = append(suitesByFile[filename].TestCases, t.tc)
+        }
+
+        var finalSuites []TestSuite
+        seenFiles := make(map[string]bool)
+        for _, t := range tests {
+            filename := t.origin.Filepath
+            if !seenFiles[filename] {
+                seenFiles[filename] = true
+                finalSuites = append(finalSuites, *suitesByFile[filename])
+            }
+        }
+
+        v.Tests.TestSuites = finalSuites
+    }*/
+    if len(v.IncludedTags) > 0 {
+    	tagOrder := make(map[string]int)
+    	for i, tag := range v.IncludedTags {
+    		tagOrder[tag] = i
+    	}
+
+    	type testWithOrigin struct {
+    		tc     TestCase
+    		origin TestSuite
+    		tag    string
+    	}
+
+    	var tests []testWithOrigin
+    	seenTests := make(map[string]bool)
+
+    	for _, ts := range v.Tests.TestSuites {
+    		for _, tc := range ts.TestCases {
+    			for _, tag := range tc.Tags {
+    				if _, ok := tagOrder[tag]; ok {
+    					key := ts.Filepath + "::" + tc.Name
+    					seenTests[key] = true
+    					tests = append(tests, testWithOrigin{
+    						tc:     tc,
+    						origin: ts,
+    						tag:    tag,
+    					})
+    					break
+    				}
+    			}
+    		}
+    	}
+
+    	sort.SliceStable(tests, func(i, j int) bool {
+    		return tagOrder[tests[i].tag] < tagOrder[tests[j].tag]
+    	})
+
+    	suitesByFile := make(map[string]*TestSuite)
+
+    	for _, t := range tests {
+    		filename := t.origin.Filepath
+    		if _, ok := suitesByFile[filename]; !ok {
+    			suitesByFile[filename] = &TestSuite{
+    				Name:     t.origin.Name,
+    				Filepath: filename,
+    				Vars:     t.origin.Vars.Clone(),
+    			}
+    		}
+    		suitesByFile[filename].TestCases = append(suitesByFile[filename].TestCases, t.tc)
+    	}
+
+    	for _, ts := range v.Tests.TestSuites {
+    		filename := ts.Filepath
+    		for _, tc := range ts.TestCases {
+    			key := filename + "::" + tc.Name
+    			if !seenTests[key] {
+    				tc.Status = StatusSkip
+    				if _, ok := suitesByFile[filename]; !ok {
+    					suitesByFile[filename] = &TestSuite{
+    						Name:     ts.Name,
+    						Filepath: filename,
+    						Vars:     ts.Vars.Clone(),
+    					}
+    				}
+    				suitesByFile[filename].TestCases = append(suitesByFile[filename].TestCases, tc)
+    			}
+    		}
+    	}
+
+    	var finalSuites []TestSuite
+    	seenFiles := make(map[string]bool)
+    	for _, t := range tests {
+    		filename := t.origin.Filepath
+    		if !seenFiles[filename] {
+    			seenFiles[filename] = true
+    			finalSuites = append(finalSuites, *suitesByFile[filename])
+    		}
+    	}
+
+    	for filename, suite := range suitesByFile {
+    		if !seenFiles[filename] {
+    			finalSuites = append(finalSuites, *suite)
+    		}
+    	}
+
+    	v.Tests.TestSuites = finalSuites
+    }
+
 	for i := range v.Tests.TestSuites {
 
 		v.Tests.TestSuites[i].Start = time.Now()
