@@ -441,8 +441,7 @@ var Cmd = &cobra.Command{
 
 func fetchOpenSearchIndexPatterns() {
 	name := os.Getenv("LOGS_PLATFORM_NAME")
-	login := os.Getenv("LOGS_PLATFORM_LOGIN")
-	password := os.Getenv("LOGS_PLATFORM_PASSWORD")
+	token := os.Getenv("LOGS_PLATFORM_TOKEN")
 	baseURL := os.Getenv("LOGS_PLATFORM_BASE_URL")
 	streamTitle := os.Getenv("LOGS_STREAM_NAME")
 
@@ -451,7 +450,7 @@ func fetchOpenSearchIndexPatterns() {
 	    return
 	}
 
-	if name == "" || login == "" || password == "" || baseURL == "" || streamTitle == "" {
+	if name == "" || token == "" || baseURL == "" || streamTitle == "" {
 		fmt.Errorf("⚠️ One or more required environment variables are missing. Skipping logs platform request.")
 		return
 	}
@@ -466,7 +465,7 @@ func fetchOpenSearchIndexPatterns() {
 	url := fmt.Sprintf("%s/api/saved_objects/_find?type=index-pattern&per_page=100", baseURL)
 
 	req, err := http.NewRequest("GET", url, nil)
-	req.SetBasicAuth(login, password)
+	req.SetBasicAuth("token", token)
     req.Header.Set("Content-Type", "application/json")
     req.Header.Set("kbn-xsrf", "true")
 	if err != nil {

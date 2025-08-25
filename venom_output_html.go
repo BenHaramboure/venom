@@ -91,6 +91,7 @@ func outputHTML(testsResult *Tests) ([]byte, error) {
     hasLogsPlatform := os.Getenv("HAS_LOGS_PLATFORM") == "true"
     logsPlatformBaseURL := os.Getenv("LOGS_PLATFORM_BASE_URL")
     namespace := os.Getenv("NAMESPACE")
+    trackedHeader := os.Getenv("TRACKED_HEADER")
     if hasLogsPlatform && logsPlatformBaseURL != "" {
         for _, suite := range testsResult.TestSuites {
             for _, testCase := range suite.TestCases {
@@ -99,20 +100,22 @@ func outputHTML(testsResult *Tests) ([]byte, error) {
                     if len(result.Errors) > 0 && !result.End.IsZero() {
                         var requestIdHeader string
 
-                        if v, ok := result.ComputedVars["result.headers.X-Kms-Requestid"]; ok {
+                        if v, ok := result.ComputedVars[fmt.Sprintf("result.headers.%s", trackedHeader)]; ok {
+                            requestIdHeader = strings.TrimPrefix(strings.TrimSpace(fmt.Sprintf("%v", v)), ".")
+                        } else if v, ok := result.ComputedVars[fmt.Sprintf("result.headersjson.%s", trackedHeader)]; ok {
                             requestIdHeader = strings.TrimPrefix(strings.TrimSpace(fmt.Sprintf("%v", v)), ".")
                         } else if rawHeaders, ok := result.ComputedVars["result.headers"]; ok {
                             switch headers := rawHeaders.(type) {
                             case map[string]interface{}:
                                 for k, v := range headers {
-                                    if strings.EqualFold(k, "X-Kms-Requestid") {
+                                    if strings.EqualFold(k, trackedHeader) {
                                         requestIdHeader = strings.TrimPrefix(strings.TrimSpace(fmt.Sprintf("%v", v)), ".")
                                         break
                                     }
                                 }
                             case map[interface{}]interface{}:
                                 for k, v := range headers {
-                                    if ks, ok := k.(string); ok && strings.EqualFold(ks, "X-Kms-Requestid") {
+                                    if ks, ok := k.(string); ok && strings.EqualFold(ks, trackedHeader) {
                                         requestIdHeader = strings.TrimPrefix(strings.TrimSpace(fmt.Sprintf("%v", v)), ".")
                                         break
                                     }
@@ -123,11 +126,11 @@ func outputHTML(testsResult *Tests) ([]byte, error) {
                         }
 
                         if strings.ToLower(os.Getenv("LOGS_PLATFORM_NAME")) == "opensearch" {
-                            fromDate := result.End.Add(-1 * time.Minute).UTC().Format("2006-01-02T15:04:05.000Z")
+                            fromDate := result.End.Add(-2 * time.Minute).UTC().Format("2006-01-02T15:04:05.000Z")
                             toDate := result.End.UTC().Format("2006-01-02T15:04:05.000Z")
                             result.LogsUrl = buildOpenSearchURL(logsPlatformBaseURL, fromDate, toDate, namespace, requestIdHeader)
                         } else if strings.ToLower(os.Getenv("LOGS_PLATFORM_NAME")) == "grafana" {
-                            fromDate := result.End.Add(-1 * time.Minute).UnixMilli()
+                            fromDate := result.End.Add(-2 * time.Minute).UnixMilli()
                             toDate := result.End.UnixMilli()
                             result.LogsUrl = buildGrafanaURL(logsPlatformBaseURL, fromDate, toDate, namespace, requestIdHeader)
                         }
